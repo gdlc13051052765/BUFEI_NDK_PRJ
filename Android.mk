@@ -19,7 +19,9 @@ LOCAL_SRC_FILES := main.c\
 				   cAppTask/cAppTask.c\
 				   json/cJSON.c\
 				   log/cLog.c\
-				   sqlite/sqliteTask.c
+				   sqlite/sqliteTask.c\
+				   perDevice/perDevice.c\
+				   
 LOCAL_SHARED_LIBRARIES := weigh-prebult\
 				   		  sqlite-prebult
 include $(BUILD_EXECUTABLE)

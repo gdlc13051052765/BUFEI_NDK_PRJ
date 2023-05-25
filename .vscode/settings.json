@@ -1,5 +1,7 @@
 {
     "files.associations": {
-        "sqlitetask.h": "c"
+        "sqlitetask.h": "c",
+        "capptask.h": "c",
+        "perdevice.h": "c"
     }
 }

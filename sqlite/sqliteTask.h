@@ -1,3 +1,6 @@
+#ifndef _SQLITETASK_H__
+#define _SQLITETASK_H__
+
 #include <stdio.h>  
 #include <fcntl.h>  
 #include <linux/ioctl.h>
@@ -13,3 +16,5 @@
 * 创建时间： 2021-05-25
 ==================================================================================*/
 int sqlite_create_config_db(void);
+
+#endif

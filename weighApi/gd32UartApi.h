@@ -1,3 +1,6 @@
+#ifndef _GD32UARTAPI_H__
+#define _GD32UARTAPI_H__
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
@@ -85,3 +88,4 @@ int init_gd32_uart_api(char *devName, int baud);
 ==================================================================================*/
 _t113_rcv_uart_Msg gd32_uart_send_data(char *send_buf, int data_len);
 
+#endif

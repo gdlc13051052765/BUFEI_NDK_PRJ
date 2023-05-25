@@ -1,4 +1,7 @@
 
+#ifndef _CAPPTASK_H__
+#define _CAPPTASK_H__
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdint.h>
@@ -25,3 +28,5 @@ void app_bufei_create_thread(void);
 * 创建时间： 2021/4/16
 ==================================================================================*/
 char* get_weigh_uuid_from_gd32(void);
+
+#endif

@@ -1,3 +1,6 @@
+#ifndef _GETWEIGHAPI_H__
+#define _GETWEIGHAPI_H__
+
 #include <stdio.h>  
 #include <stdlib.h>  
 #include <string.h>
@@ -103,3 +106,5 @@ _t113_rcv_uart_Msg read_bufei_version(void)  ;
 * 创建时间： 2022-12-08 170658
 ==================================================================================*/  
 _Tag_Info read_bufei_weigh_uuid(void)  ;
+
+#endif

@@ -13,11 +13,12 @@
 #include "udpSocket.h"
 #include "../json/cJSON.h"
 #include "../cAppTask/cAppTask.h"
+#include "../perDevice/perDevice.h"
 
 
 //udp命令列表 利用enum实现switch case 字符串功能
-enum choice {init, getWeigh, endCmd};
-const char *choices[] = {"init", "getWeigh","endCmd"};
+enum choice {getVersion, setLed, getWeigh, getCard, getDevUUID, ota, endCmd};
+const char *choices[] = {"getVersion", "setLed", "getWeigh", "getCard", "getDevUUID", "ota" "endCmd"};
 
 #define RCV_PORT 6666//接收端口
 #define SEN_PORT 8888//发送端口
@@ -29,8 +30,8 @@ struct sockaddr_in server_addr;
 struct sockaddr_in cliaddr;
 char ipbuf[64];
 int len = sizeof(cliaddr);
-char udpRcvBuf[1024]={};
-char udpSendBuf[1024]={};//udp发送数据缓存
+char udpRcvBuf[1024]={0};
+char udpSendBuf[1024]={0};//udp发送数据缓存
 
 //安卓 udp 命令解析
 static void udpsocket_data_processing(char *data);
@@ -129,6 +130,27 @@ int udpsocket_send_data(char *data)
 }
 
 /*==================================================================================
+* 函 数 名： udpsocket_ack_result_code
+* 参    数：
+* 功能描述:  udp socket 发送错误应答
+* 返 回 值： 创建成功返回0
+* 备    注： None
+* 作    者： lc
+* 创建时间： 2023/03/30
+==================================================================================*/
+static void udpsocket_ack_result_code(int status, char *string)
+{
+    //创建根节点JSON(最外面大括号的JSON对象)
+    cJSON *json_root=cJSON_CreateObject();
+    cJSON_AddBoolToObject(json_root, "success", status); 
+    cJSON_AddStringToObject(json_root, "message", string);
+    char *data = cJSON_Print(json_root);
+    cJSON_Delete(json_root); 
+    debug("udp send data = %s\n", data);
+    udpsocket_send_data(data);
+}
+
+/*==================================================================================
 * 函 数 名： udpsocket_data_processing
 * 参    数：
 * 功能描述:  udp socket 接收数据处理
@@ -139,27 +161,39 @@ int udpsocket_send_data(char *data)
 ==================================================================================*/
 static void udpsocket_data_processing(char *json_string)
 {
-    int i =0;
+    int i =0,num=0;
+    int status;
     char *buf =NULL;
+    char data[128] = {0};
+    char temp_str[256] = {0};
+    char numStr[256] = {0};
+    cJSON* rootJson = NULL;
+    cJSON *dataJson = NULL;
+    cJSON *cmdJson = NULL;   
+    cJSON *actionJson = NULL;
     
     //JSON字符串到cJSON格式
-    cJSON* cjson = cJSON_Parse(json_string); 
+    rootJson = cJSON_Parse(json_string); 
     //判断cJSON_Parse函数返回值确定是否打包成功
-    if(cjson == NULL){
-        printf("json pack into cjson error...");
+    if(rootJson == NULL) {
+        debug("json pack into cjson error...\n");
+        goto err;
+    } else {//打包成功调用cJSON_Print打印输出
+        cJSON_Print(rootJson);
     }
-    else{//打包成功调用cJSON_Print打印输出
-        cJSON_Print(cjson);
+     //获取字段值
+    //cJSON_GetObjectItemCaseSensitive返回的是一个cJSON结构体所以我们可以通过函数返回结构体的方式选择返回类型！
+    cmdJson = cJSON_GetObjectItem(rootJson, "cmd");
+    if(cmdJson==NULL)
+    {
+        goto err;
     }
     //获取字段值
     //cJSON_GetObjectItemCaseSensitive返回的是一个cJSON结构体所以我们可以通过函数返回结构体的方式选择返回类型！
-    char *cmdStr = cJSON_GetObjectItemCaseSensitive(cjson,"cmd")->valuestring;
+    char *cmdStr = cJSON_GetObjectItemCaseSensitive(rootJson, "cmd")->valuestring;
     //打印输出
-    printf("cmd  = %s\n", cmdStr);
-    //delete cjson
-    cJSON_Delete(cjson);
-    //命令解析
-    for(i=init; i<=endCmd; i++)
+    debug("cmd = %s\n", cmdStr);
+    for(i=getVersion; i<endCmd; i++)
     {
         if(strcmp(cmdStr, choices[i]) == 0)
         {
@@ -168,19 +202,91 @@ static void udpsocket_data_processing(char *json_string)
     }
     switch(i)
     {
-        case init:
+        case getVersion://获取设备版本号
+            debug("get dev version msg cmd\n");
            // udpsocket_send_data(udpSendBuf);
         break;
 
-        case getWeigh: //获取当前重量用户卡信息
+        case setLed://设置led
+            debug("get set led cmd\n");
+            dataJson = cJSON_GetObjectItem(rootJson,"data");
+            if(dataJson==NULL)
+            {
+                goto err;
+            } 
+            //json数据转换成字符串并打印输出
+            char *str = cJSON_PrintUnformatted(dataJson);
+            debug("dataJson  = %s\n", str);
+            actionJson = cJSON_GetObjectItem(dataJson, "led");
+            if(actionJson==NULL)
+            {
+                debug("data led cmd err\n");
+                goto err;
+            } 
+            str = cJSON_PrintUnformatted(actionJson);
+            //获取元素个数
+            num =  cJSON_GetArraySize(actionJson);
+            debug("actionJson  = %s number = %d\n", str,num);
+            for(int i=0; i<=MAX_LED_NUM; i++)
+            {
+                memset(numStr,0,sizeof(numStr));
+                sprintf(numStr,"%d",i);
+                /*判断是否有key键值是string的项，如果有返回1，否则返回0*/
+                if(cJSON_HasObjectItem(actionJson, numStr) > 0)
+                {
+                    cJSON *numJson = cJSON_GetObjectItem(actionJson, numStr); 
+                    if(strcmp("open", numJson->valuestring) == 0)
+                    {
+                        debug("LED-%d open\n", i);
+                        open_close_led_device(i, true); 
+                    } else {
+                        debug("LED-%d close\n", i);
+                        open_close_led_device(i, false); 
+                    }
+                }
+            }  
+            //delete rootJson
+            cJSON_Delete(rootJson);
+            memset(data, 0, sizeof(data)); 
+            sprintf(data, "%s","success");
+            udpsocket_ack_result_code(cJSON_True,data);
+            return;
+        break;
+
+        case getWeigh://获取当前重量用户卡信息
+            debug("get current weigh msg cmd\n");
             buf = get_weigh_uuid_from_gd32(); 
             memset(udpSendBuf, 0, sizeof(udpSendBuf));
             memcpy(udpSendBuf, buf, strlen(buf));
-            printf("udp send data = %s\n", udpSendBuf);
+            debug("udp send data = %s\n", udpSendBuf);
+            //delete rootJson
+            cJSON_Delete(rootJson);
             udpsocket_send_data(udpSendBuf);
+            return;
+        break;
+
+        case getCard://获取用户卡片信息
+            debug("get usr card msg cmd\n");
+        break;
+
+        case getDevUUID://获取设备唯一UUID
+            debug("get dev uuid cmd\n");
+        break;
+
+        case ota://固件升级
+            debug("ota cmd\n");
         break;
 
         default:
+            goto err;
         break;
     }
+    err://json错误应答
+        //delete rootJson
+        cJSON_Delete(rootJson);
+        //udp socket 应答
+        memset(data, 0, sizeof(data));
+        sprintf(data, "%s", "err json cmd");
+        udpsocket_ack_result_code(cJSON_False, data);
+        return;
 }

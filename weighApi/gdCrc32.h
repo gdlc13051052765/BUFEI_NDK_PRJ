@@ -1,3 +1,6 @@
+#ifndef _GD32CRC_H__
+#define _GD32CRC_H__
+
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
@@ -22,3 +25,5 @@
 uint32_t CRC32Software(uint8_t *pData, uint16_t Length);
 
 int crc32_test(void);
+
+#endif

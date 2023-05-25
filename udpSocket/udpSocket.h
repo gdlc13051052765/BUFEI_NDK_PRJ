@@ -1,3 +1,6 @@
+#ifndef _UDPSOCKET_H__
+#define _UDPSOCKET_H__
+
 #include <stdio.h>  
 #include <fcntl.h>  
 #include <string.h>
@@ -46,3 +49,4 @@ int udpsocket_send_data(char *data);
 ==================================================================================*/
 void udpsocket_set_weigh_uuid_data(char *data);
 
+#endif
