@@ -6,7 +6,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "gd32UartApi.h"
+#include "../crc/gdCrc32.h"
  
 
 #define TAG_UID_LENS			8
@@ -18,6 +18,16 @@ typedef unsigned int  u32;
 #define UPDATE_DATA_LENS	106		
 #define READ_CMD  2//单片机板读命令
 #define WRITE_CMD 3//单片机板写命令
+
+
+
+#define T113_RCV_LENGTH			100
+//串口收发数据结构体
+typedef struct 
+{ 
+    uint8_t byte_count;
+    uint8_t data[T113_RCV_LENGTH];
+}_t113_rcv_uart_Msg, *_pt113_rcv_uart_Msg;
 
 typedef enum
 {
@@ -72,6 +82,12 @@ typedef struct
 	uint8_t block[TAG_LENGTH];	//block数据
     //重量信息
     int32_t weighValue;//重量值
+	//重量绝对值
+	int32_t absoluteValue;
+	//当前消费额
+	int32_t currentMoney;
+	//消费总额
+	int32_t toalMoney;
 }_Tag_Info, *_pTag_Info;
 
 /*==================================================================================

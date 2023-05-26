@@ -2,6 +2,7 @@
     "files.associations": {
         "sqlitetask.h": "c",
         "capptask.h": "c",
-        "perdevice.h": "c"
+        "perdevice.h": "c",
+        "gd32uartapi.h": "c"
     }
 }

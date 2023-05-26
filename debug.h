@@ -11,9 +11,9 @@
  */
 #define DEBUG        //打印开关
 #ifdef DEBUG 
-    #define debug(format, args...)  fprintf(stderr, format, ##args)
+    #define debug_print(format, args...)  fprintf(stderr, format, ##args)
 #else
-    #define debug(fmt, args...)
+    #define debug_print(fmt, args...)
 #endif
 
 //error code defines

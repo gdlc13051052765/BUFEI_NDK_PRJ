@@ -1,10 +1,10 @@
 LOCAL_PATH := $(call my-dir) 
 
 #先把so编译成module 在编译可执行程序时调用
-include $(CLEAR_VARS)
-LOCAL_MODULE := weigh-prebult
-LOCAL_SRC_FILES := weighApi/libgetWeighApi.so
-include $(PREBUILT_SHARED_LIBRARY)
+# include $(CLEAR_VARS)
+# LOCAL_MODULE := weigh-prebult
+# LOCAL_SRC_FILES := weighApi/libgetWeighApi.so
+# include $(PREBUILT_SHARED_LIBRARY)
 
 include $(CLEAR_VARS)
 LOCAL_MODULE := sqlite-prebult
@@ -21,7 +21,10 @@ LOCAL_SRC_FILES := main.c\
 				   log/cLog.c\
 				   sqlite/sqliteTask.c\
 				   perDevice/perDevice.c\
-				   
-LOCAL_SHARED_LIBRARIES := weigh-prebult\
-				   		  sqlite-prebult
+				   usart/usart.c\
+				   crc/gdCrc32.c\
+				   weighApi/getWeighApi.c\
+
+LOCAL_SHARED_LIBRARIES := sqlite-prebult
+				   		  
 include $(BUILD_EXECUTABLE)

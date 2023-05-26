@@ -13,6 +13,7 @@
 #include "../weighApi/getWeighApi.h"
 #include "../udpSocket/udpsocket.h"
 #include "../json/cJSON.h"
+#include "../debug.h"
 
 static pthread_t thread[10];  //两个线程
 
@@ -94,8 +95,9 @@ static char* create_weigh_json(_Tag_Info pTag)
 static void *get_weigh_gd32_thread(void *args) 
 {
 	int status = -1;
+	int fd = -1;
 
-    init_gd32_uart_api(devname, 115200);
+    fd = init_gd32_uart_api(devname, 115200);
     read_bufei_version();
     while(1)
     {

@@ -27,7 +27,7 @@ static char v2id[] = "";
 static sqlite_int64  restaurantid = 155;//餐厅ID
 
 //基础配置数据库路径
-#define base_config_path "/data/meican/base_config.db"
+#define base_config_path "/system/app/meican/base_config.db"
 
 /*==================================================================================
 * 函 数 名： sqlite_create_config_db
@@ -47,11 +47,11 @@ int sqlite_create_config_db(void)
     /* 创建基础信息数据库 */
     err = sqlite3_open(base_config_path, &config_db);
     if( err ) {
-        debug("Can't open database: %s\n", sqlite3_errmsg(config_db));
+        debug_print("Can't open database: %s\n", sqlite3_errmsg(config_db));
         sqlite3_close(config_db);
         return err;
     } 
-    debug("You have opened a sqlite3 database named config_db successfully!\n");
+    debug_print("You have opened a sqlite3 database named config_db successfully!\n");
     //硬件版本 har_ver 软件版本 soft_ver 字符编号 cha_encod 字库名称 font _name 主菜单表明 main_m_name 菜单类型版本 menu_type
     //菜单版本 menu_ver 食堂地址 address 设备状态 dev_status 菜单等级总数 menu_level 美餐识别码 Indent_code
     char *sql = "create table config (har_ver char, soft_ver char,shadow_name char,shadow_id char ,main_m_name char,\
@@ -64,7 +64,7 @@ int sqlite_create_config_db(void)
     //插入数据
     err = sqlite3_open(base_config_path, &config_db);
     if( err ) {
-        debug("Can't open database: %s\n", sqlite3_errmsg(config_db));
+        debug_print("Can't open database: %s\n", sqlite3_errmsg(config_db));
         sqlite3_close(config_db);
         return err;
     }
@@ -73,7 +73,7 @@ int sqlite_create_config_db(void)
             har_ver,soft_ver,shadow_name,shadow_id,main_m_name,menu_type,menu_ver,new_menu_ver,address,
             dev_status,menu_level,Indent_code,uuid,sn,v2id,restaurantid,soft_verbak,JodID,OtaResult);
 
-    debug("config insertdata = %s\n", tempdata);
+    debug_print("config insertdata = %s\n", tempdata);
     err = sqlite3_exec(config_db,tempdata,NULL,NULL,&zErrMsg);
     sqlite3_close(config_db);
     return err;

@@ -9,7 +9,7 @@
 int main(void)
 {
     //创建基础配置数据库
-   // sqlite_create_config_db();
+    // sqlite_create_config_db();
    // write_log_test();
     //创建C进程任务
     app_bufei_create_thread();
