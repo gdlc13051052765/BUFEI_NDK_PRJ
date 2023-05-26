@@ -26,24 +26,24 @@ typedef unsigned int  u32;
 typedef struct 
 { 
     uint8_t byte_count;
-    uint8_t data[T113_RCV_LENGTH];
-}_t113_rcv_uart_Msg, *_pt113_rcv_uart_Msg;
+    char data[T113_RCV_LENGTH];
+}android_rcv_uart_Msg, *_pandroid_rcv_uart_Msg;
 
 typedef enum
 {
 	//安卓发起到CC的命令 
-	T113_CC_GET_SW_AND_HW_VER	= 0xA1,//获取版本号
-	T113_CC_GET_WEIGH_UUID,//获取当前重量值跟卡号
+	ANDROID_CC_GET_SW_AND_HW_VER	= 0xA1,//获取版本号
+	ANDROID_CC_GET_WEIGH_UUID,//获取当前重量值跟卡号
 
 	//固件升级命令
-	T113_CC_UPDATE_INFO  = 0x80,//下发升级包信息
-	T113_CC_UPDATE_DATA  = 0x81,//下发升级包数据
-	T113_CC_GET_VERSION  = 0x82,//获取软硬件版本
-	T113_CC_UPDATE_CHECK = 0x84,//检查确认升级
-	T113_CC_UPDATE_RESET = 0x88,//重启
-	T113_CC_UPDATE_LOST  = 0x8A,//下发缺失升级包
+	ANDROID_CC_UPDATE_INFO  = 0x80,//下发升级包信息
+	ANDROID_CC_UPDATE_DATA  = 0x81,//下发升级包数据
+	ANDROID_CC_GET_VERSION  = 0x82,//获取软硬件版本
+	ANDROID_CC_UPDATE_CHECK = 0x84,//检查确认升级
+	ANDROID_CC_UPDATE_RESET = 0x88,//重启
+	ANDROID_CC_UPDATE_LOST  = 0x8A,//下发缺失升级包
 	
-}_T113_Cmd;
+}android_Cmd;
 
 //发送数据结构体
 typedef struct
@@ -90,6 +90,18 @@ typedef struct
 	int32_t toalMoney;
 }_Tag_Info, *_pTag_Info;
 
+
+/*==================================================================================
+* 函 数 名： init_gd32_uart_api
+* 参    数：* 入口参数： devName 设备号"/dev/ttyS0"; baud 波特率
+* 功能描述:  初始化获取重量接口
+* 返 回 值：
+* 备    注： None
+* 作    者： lc
+* 创建时间： 2021/6/29
+==================================================================================*/
+int init_gd32_uart_api(char *devName,int baud );
+
 /*==================================================================================
 * 函 数 名： send_data_to_gd32
 * 参    数： None
@@ -99,7 +111,7 @@ typedef struct
 * 作    者： lc
 * 创建时间： 2022-12-08 170658 
 ==================================================================================*/  
-_t113_rcv_uart_Msg send_data_to_gd32(void* ret_msg) ;
+android_rcv_uart_Msg send_data_to_gd32(void* ret_msg) ;
 
 /*==================================================================================
 * 函 数 名： read_bufei_version
@@ -110,7 +122,7 @@ _t113_rcv_uart_Msg send_data_to_gd32(void* ret_msg) ;
 * 作    者： lc
 * 创建时间： 2022-12-08 170658
 ==================================================================================*/  
-_t113_rcv_uart_Msg read_bufei_version(void)  ;
+android_rcv_uart_Msg read_bufei_version(void)  ;
 
 /*==================================================================================
 * 函 数 名： read_bufei_weigh_uuid

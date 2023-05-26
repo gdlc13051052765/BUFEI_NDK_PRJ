@@ -1,7 +1,7 @@
 
 APP_OPTIM := debug
 
-# APP_CFLAGS += -std=c99
+APP_CFLAGS += -std=c99
 #做或者c++编程的都应该知道编译器编译参数设置
 APP_CPPFLAGS +=
 #做或者c++编程的都应该知道编译器编译参数设置

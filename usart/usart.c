@@ -216,12 +216,12 @@ static int UART_Init(int fd, int speed, int flow_ctrlint, int databits, int stop
 }
 
 /*******************************************************************
-* 名称： uart_init
+* 名称： usart_init
 * 功能： 串口初始化
 * 入口参数： dev 设备号"/dev/ttyS0"; baud 波特率
 * 出口参数： 正确返回为设备号，错误返回为-1
 *******************************************************************/
-int uart_init(char *dev, int baud)
+int usart_init(char *dev, int baud)
 {
     int fd = false; 
     int ret;

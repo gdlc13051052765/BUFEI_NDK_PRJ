@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "getWeighApi.h"
 #include "../debug.h"
+#include "../usart/usart.h"
 
 
 //串口设备名字gd32串口
@@ -32,7 +33,7 @@ void delay_ms(int i)
 ==================================================================================*/
 int init_gd32_uart_api(char *devName,int baud )
 {
-    gd_usart_fd = uart_init(devName, baud);
+    gd_usart_fd = usart_init(devName, baud);
     return gd_usart_fd;
 }
 
@@ -45,10 +46,10 @@ int init_gd32_uart_api(char *devName,int baud )
 * 作    者： lc
 * 创建时间： 2021/6/29
 ==================================================================================*/
-_t113_rcv_uart_Msg gd32_uart_send_data(char *send_buf, int data_len)
+android_rcv_uart_Msg gd32_uart_send_data(char *send_buf, int data_len)
 {
     int ret, i;
-    _t113_rcv_uart_Msg pmsg;
+    android_rcv_uart_Msg pmsg;
 
     uart_send(gd_usart_fd, send_buf, data_len);
     ret = uart_recv(gd_usart_fd, pmsg.data , 100);   
@@ -63,8 +64,8 @@ _t113_rcv_uart_Msg gd32_uart_send_data(char *send_buf, int data_len)
         pmsg.byte_count = ret;
         return pmsg;
     }
+	return pmsg;
 }
-
 
 /*==================================================================================
 * 函 数 名： file_read_bin_data
@@ -160,11 +161,11 @@ int file_out_handle(char *out_file, u8 *buf, u32 size)
 * 作    者： lc
 * 创建时间： 2022-12-08 170658 
 ==================================================================================*/  
-_t113_rcv_uart_Msg send_data_to_gd32(void* ret_msg)  
+android_rcv_uart_Msg send_data_to_gd32(void* ret_msg)  
 {
 	_pUpdate_Send_Info pmsg = ret_msg;
-	_t113_rcv_uart_Msg uart_msg;
-	uint8_t buf[200];
+	android_rcv_uart_Msg uart_msg;
+	char buf[200];
 	uint8_t len = 0,i;
 
 	buf[len++] = 0x55;
@@ -182,7 +183,7 @@ _t113_rcv_uart_Msg send_data_to_gd32(void* ret_msg)
 	memcpy(buf+len, &pmsg->crc32, 4);
 	len += 4;
 
-	debug_print("t113 发送数据 = ");
+	debug_print("android 发送数据 = ");
 	for(i=0; i<len; i++)
 	{
 		debug_print("%02x ",buf[i]);
@@ -221,9 +222,9 @@ static int read_bin_data_send_to_gd32(void)
 			pmsg.main_cmd = WRITE_CMD;
 			pmsg.nodeID = 0x00;
 			if(i==0)
-				pmsg.slave_cmd = T113_CC_UPDATE_INFO; //信息包
+				pmsg.slave_cmd = ANDROID_CC_UPDATE_INFO; //信息包
 			else
-				pmsg.slave_cmd = T113_CC_UPDATE_DATA; //升级包数据
+				pmsg.slave_cmd = ANDROID_CC_UPDATE_DATA; //升级包数据
 			memcpy(pmsg.data, buf+i*UPDATE_DATA_LENS, UPDATE_DATA_LENS);
 			send_data_to_gd32(&pmsg);
 			delay_ms(10);
@@ -235,7 +236,7 @@ static int read_bin_data_send_to_gd32(void)
 	pmsg.slid = 0x00;
 	pmsg.main_cmd = WRITE_CMD;
 	pmsg.nodeID = 0x00;
-	pmsg.slave_cmd = T113_CC_UPDATE_CHECK;
+	pmsg.slave_cmd = ANDROID_CC_UPDATE_CHECK;
 	send_data_to_gd32(&pmsg);
 	delay_ms(100);
 	//下发重启命令
@@ -243,7 +244,7 @@ static int read_bin_data_send_to_gd32(void)
 	pmsg.slid = 0x00;
 	pmsg.main_cmd = WRITE_CMD;
 	pmsg.nodeID = 0x00;
-	pmsg.slave_cmd = T113_CC_UPDATE_RESET;
+	pmsg.slave_cmd = ANDROID_CC_UPDATE_RESET;
 	send_data_to_gd32(&pmsg);
     return 0;  
 }
@@ -270,7 +271,7 @@ static int read_bin_test(void)
 		for(i=0; i<size; i++)
 		{
 			debug_print("%02x ", buf[i]);  
-			if(!((i+1)%106) & i>10)
+			if(!((i+1)%106) & (i>10))
 			{
 				debug_print("\n");
 			}
@@ -289,16 +290,16 @@ static int read_bin_test(void)
 * 作    者： lc
 * 创建时间： 2022-12-08 170658
 ==================================================================================*/   
-_t113_rcv_uart_Msg read_bufei_version(void)  
+android_rcv_uart_Msg read_bufei_version(void)  
 {
 	_Update_Send_Info pmsg;
-	_t113_rcv_uart_Msg uart_msg;
+	android_rcv_uart_Msg uart_msg;
 
 	pmsg.len  = 0x08;
 	pmsg.slid = 0x00;
 	pmsg.main_cmd = READ_CMD;
 	pmsg.nodeID = 0x00;
-	pmsg.slave_cmd = T113_CC_GET_SW_AND_HW_VER;
+	pmsg.slave_cmd = ANDROID_CC_GET_SW_AND_HW_VER;
 
 	uart_msg = send_data_to_gd32(&pmsg);
 	debug_print("硬件版本 = %02X; 软件版本 = %02X\n", uart_msg.data[6], uart_msg.data[7]);
@@ -317,14 +318,14 @@ _t113_rcv_uart_Msg read_bufei_version(void)
 _Tag_Info read_bufei_weigh_uuid(void)  
 {
 	_Update_Send_Info pmsg;
-	_t113_rcv_uart_Msg uart_msg={0};
+	android_rcv_uart_Msg uart_msg={0};
     _Tag_Info tag_msg={0};
 
 	pmsg.len  = 0x08;
 	pmsg.slid = 0x00;
 	pmsg.main_cmd = READ_CMD;
 	pmsg.nodeID = 0x00;
-	pmsg.slave_cmd = T113_CC_GET_WEIGH_UUID;
+	pmsg.slave_cmd = ANDROID_CC_GET_WEIGH_UUID;
 
 	uart_msg = send_data_to_gd32(&pmsg);
 	tag_msg.is_use = uart_msg.data[5];

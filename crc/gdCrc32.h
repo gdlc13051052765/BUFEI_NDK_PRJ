@@ -22,7 +22,7 @@
 * 作    者： lc
 * 创建时间： 2022-06-08 170658
 ==================================================================================*/  
-uint32_t CRC32Software(uint8_t *pData, uint16_t Length);
+uint32_t CRC32Software(char *pData, uint16_t Length);
 
 int crc32_test(void);
 
