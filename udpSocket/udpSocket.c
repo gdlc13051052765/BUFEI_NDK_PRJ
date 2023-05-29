@@ -14,6 +14,8 @@
 #include "../json/cJSON.h"
 #include "../cAppTask/cAppTask.h"
 #include "../perDevice/perDevice.h"
+#include "../devConfig.h"
+#include "udpSocket/udpfifo.h"
 
 
 //udp命令列表 利用enum实现switch case 字符串功能
@@ -33,8 +35,8 @@ int len = sizeof(cliaddr);
 char udpRcvBuf[1024]={0};
 char udpSendBuf[1024]={0};//udp发送数据缓存
 
-//安卓 udp 命令解析
-static void udpsocket_data_processing(char *data);
+// //安卓 udp 命令解析
+// static void udpsocket_data_processing(char *data);
 
 //创建UDP——CLIENT跟JAVA UDP——server通讯；利用本地回环地址的形式
 /*==================================================================================
@@ -82,13 +84,23 @@ int make_udpsocket_connect(void)
 ==================================================================================*/
 void udpsocket_receive_data(void)
 {
+    _udp_Msg pUdpmag;
+
     memset(udpRcvBuf, 0, sizeof(udpRcvBuf));
     int rlen = recvfrom(javaSocketFd, udpRcvBuf, sizeof(udpRcvBuf), 0, (struct sockaddr*)&cliaddr, &len);
     if(rlen>0)
     {
         //LogWrite("INFO",buf);
+        #ifdef UDP_FIFO_MODE
+            pUdpmag.byte_count = rlen;
+            memset(pUdpmag.data,0,sizeof(pUdpmag.data));
+            memcpy(pUdpmag.data, udpRcvBuf, rlen);
+            debug_print("udpsocket_receive_data = %s\n",pUdpmag.data);
+            udp_fifo_push_data_msg(&pUdpmag);
+        #else
+            udpsocket_data_processing(udpRcvBuf);
+        #endif
         usleep(1000);
-        udpsocket_data_processing(udpRcvBuf);
        // udpsocket_send_data(udpSendBuf);
     }
 }
@@ -159,7 +171,7 @@ static void udpsocket_ack_result_code(int status, char *string)
 * 作    者： lc
 * 创建时间： 2023/03/30
 ==================================================================================*/
-static void udpsocket_data_processing(char *json_string)
+void udpsocket_data_processing(char *json_string)
 {
     int i =0,num=0;
     int status;
@@ -208,7 +220,7 @@ static void udpsocket_data_processing(char *json_string)
         break;
 
         case setLed://设置led
-            debug_print("get set led cmd\n");
+            debug_print("set led cmd\n");
             dataJson = cJSON_GetObjectItem(rootJson, "data");
             if(dataJson==NULL)
             {
@@ -227,6 +239,11 @@ static void udpsocket_data_processing(char *json_string)
             //获取元素个数
             num =  cJSON_GetArraySize(actionJson);
             debug_print("actionJson = %s number = %d\n", str, num);
+            if(num == 0)//没有查询到要控制的led
+            {
+                goto err;
+                return;
+            }
             for(int i=0; i<=MAX_LED_NUM; i++)
             {
                 memset(numStr, 0, sizeof(numStr));

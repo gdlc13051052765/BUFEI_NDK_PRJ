@@ -15,7 +15,8 @@ include $(PREBUILT_SHARED_LIBRARY)
 include $(CLEAR_VARS) 
 LOCAL_MODULE := buFeiUartTest
 LOCAL_SRC_FILES := main.c\
-				   udpSocket/udpsocket.c\
+				   udpSocket/udpSocket.c\
+				   udpSocket/udpfifo.c\
 				   cAppTask/cAppTask.c\
 				   json/cJSON.c\
 				   log/cLog.c\
@@ -24,6 +25,7 @@ LOCAL_SRC_FILES := main.c\
 				   usart/usart.c\
 				   crc/gdCrc32.c\
 				   weighApi/getWeighApi.c\
+	
 
 LOCAL_SHARED_LIBRARIES := sqlite-prebult
 				   		  

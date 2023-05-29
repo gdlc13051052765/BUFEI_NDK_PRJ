@@ -14,6 +14,8 @@
 #include "../udpSocket/udpsocket.h"
 #include "../json/cJSON.h"
 #include "../debug.h"
+#include "../udpSocket/udpfifo.h"
+#include "../devConfig.h"
 
 static pthread_t thread[10];  //两个线程
 
@@ -36,7 +38,7 @@ static int init_weigh = 0;
 * 作    者： lc
 * 创建时间： 2021/4/16
 ==================================================================================*/
-static void *udp_socket_thread(void *args) 
+static void *udp_recv_socket_thread(void *args) 
 {
 	int status = -1;
 
@@ -49,6 +51,28 @@ static void *udp_socket_thread(void *args)
 	{
 		udpsocket_receive_data();
 		//usleep(50000);
+	}
+}
+
+/*==================================================================================
+* 函 数 名： udp_ack_socket_thread
+* 参    数： Non
+* 功能描述:  udp socket 应答任务
+* 返 回 值：
+* 备    注： 
+* 作    者： lc
+* 创建时间： 2021/4/16
+==================================================================================*/
+static void *udp_ack_socket_thread(void *args) 
+{
+	#ifdef UDP_FIFO_MODE
+		//初始护士udp fifo
+		udp_fifo_instance_init();
+	#endif
+	while(1)
+	{
+		udp_fifo_pop_one_frame();
+		usleep(50000);
 	}
 }
 
@@ -164,9 +188,14 @@ char* get_weigh_uuid_from_gd32(void)
 void app_bufei_create_thread(void)
 {
 	int temp;
-	memset(&thread, 0, sizeof(thread));          
+	memset(&thread, 0, sizeof(thread));  
 
-	if((temp = pthread_create(&thread[1], NULL, udp_socket_thread, NULL)) != 0)//udp socket线程任务
+	if((temp = pthread_create(&thread[0], NULL, udp_ack_socket_thread, NULL)) != 0)//udp socket应答线程任务
+		debug_print("thread 0 make fail\n");
+	else
+		debug_print("thread 0 make ok\n");       
+
+	if((temp = pthread_create(&thread[1], NULL, udp_recv_socket_thread, NULL)) != 0)//udp socket线程任务
 		debug_print("thread 1 make fail\n");
 	else
 		debug_print("thread 1 make ok\n");
@@ -176,6 +205,7 @@ void app_bufei_create_thread(void)
 	else
 		debug_print("thread 2 make ok\n");
 
-	pthread_join(thread[1],NULL);
-	pthread_join(thread[2],NULL);
+	pthread_join(thread[0], NULL);
+	pthread_join(thread[1], NULL);
+	pthread_join(thread[2], NULL);
 }

@@ -16,5 +16,5 @@ APP_PIE = true
 APP_ABI = armeabi-v7a
 #这个变量我们会经常遇到，主要是指定app或者说so运行的cpu指令集。
 
-APP_PLATFORM = android-7
+APP_PLATFORM = android-19
 #这个对应的android版本号
