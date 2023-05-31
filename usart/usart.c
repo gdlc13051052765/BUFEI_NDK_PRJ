@@ -1,3 +1,8 @@
+/*****************************************************************************************
+ * 文件说明：
+ * linux 串口基础配置文件
+ * 串口创建，波特率配置等
+ *****************************************************************************************/
 #include<stdio.h>
 #include<stdlib.h>
 #include<unistd.h>
@@ -9,7 +14,7 @@
 #include<string.h>
 #include<stdint.h>
 #include<stdbool.h>
-#include "../debug.h"
+#include "../devConfig.h"
 
 //文件号
 //int fd = false; 

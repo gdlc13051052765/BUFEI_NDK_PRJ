@@ -1,7 +1,12 @@
+/*****************************************************************************************
+ * 文件说明：
+ * UDP接收安卓数据缓存队列管理
+ * 
+ *****************************************************************************************/
 #include "udpfifo.h"
 #include "udpSocket.h"
 #include "../devConfig.h"
-#include "../debug.h"
+
 
 udp_send_queue_t	pudp_queue;//udp socket接收队列
 
@@ -108,13 +113,13 @@ uint8_t udp_fifo_pop_one_frame(void )
             {
                 if(p_queue_buff->queue[i].byte_count)
                 {
-                    debug_print("队列里面的消息长度 = %d \r\n",p_queue_buff->queue[i].byte_count);
-                    udpsocket_data_processing(&(p_queue_buff->queue[i].data));
+                    //debug_print("队列里面的消息长度 = %d \r\n",p_queue_buff->queue[i].byte_count);
+                    udpsocket_data_processing((p_queue_buff->queue[i].data));
                     msg_udp_queue_pop(p_queue_buff, 0);
                     return 0;
                 }	
             }
-            //debug_print("队列里面的消息个数 =%d \n",num);
+            debug_print("队列里面的消息个数 =%d \n",num);
         }
        
     #else

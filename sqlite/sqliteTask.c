@@ -1,8 +1,12 @@
+/*****************************************************************************************
+ * 文件说明：
+ * 数据库创建，查询，修改等
+ *****************************************************************************************/
 #include <stdio.h>  
 #include <fcntl.h>  
 #include <linux/ioctl.h>
 #include "sqlite3.h"
-#include "../debug.h"
+#include "../devConfig.h"
 
 
 static char *zErrMsg = NULL;

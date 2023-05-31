@@ -1,11 +1,15 @@
  
+/*****************************************************************************************
+ * 文件说明：
+ * 调用串口，从GD32单片机获取重量以及读卡信息
+ *****************************************************************************************/
 #include <stdio.h>  
 #include <stdlib.h>  
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
 #include "getWeighApi.h"
-#include "../debug.h"
+#include "../devConfig.h"
 #include "../usart/usart.h"
 
 
@@ -49,7 +53,7 @@ int init_gd32_uart_api(char *devName,int baud )
 android_rcv_uart_Msg gd32_uart_send_data(char *send_buf, int data_len)
 {
     int ret, i;
-    android_rcv_uart_Msg pmsg;
+    android_rcv_uart_Msg pmsg={0};
 
     uart_send(gd_usart_fd, send_buf, data_len);
     ret = uart_recv(gd_usart_fd, pmsg.data , 100);   
@@ -293,7 +297,7 @@ static int read_bin_test(void)
 android_rcv_uart_Msg read_bufei_version(void)  
 {
 	_Update_Send_Info pmsg;
-	android_rcv_uart_Msg uart_msg;
+	android_rcv_uart_Msg uart_msg= {0};
 
 	pmsg.len  = 0x08;
 	pmsg.slid = 0x00;
@@ -302,7 +306,7 @@ android_rcv_uart_Msg read_bufei_version(void)
 	pmsg.slave_cmd = ANDROID_CC_GET_SW_AND_HW_VER;
 
 	uart_msg = send_data_to_gd32(&pmsg);
-	debug_print("硬件版本 = %02X; 软件版本 = %02X\n", uart_msg.data[6], uart_msg.data[7]);
+	debug_print("称重板硬件版本 = %02X; 称重板软件版本 = %02X\n", uart_msg.data[6], uart_msg.data[7]);
 	return uart_msg;
 }
 
@@ -325,16 +329,71 @@ _Tag_Info read_bufei_weigh_uuid(void)
 	pmsg.slid = 0x00;
 	pmsg.main_cmd = READ_CMD;
 	pmsg.nodeID = 0x00;
-	pmsg.slave_cmd = ANDROID_CC_GET_WEIGH_UUID;
+	pmsg.slave_cmd = ANDROID_CC_GET_WEIGH_UID;
 
 	uart_msg = send_data_to_gd32(&pmsg);
-	tag_msg.is_use = uart_msg.data[5];
-	memcpy(tag_msg.uid, uart_msg.data+6, TAG_UID_LENS);
+	tag_msg.toalNum = uart_msg.data[5];//卡片数量
+	tag_msg.meicanCode = uart_msg.data[6];//美餐标识符
+
+	memcpy(tag_msg.uid, uart_msg.data+7, TAG_UID_LENS);
+	memcpy(&tag_msg.weighValue, uart_msg.data+7+TAG_UID_LENS, 4);
+
+	return tag_msg;
+}
+
+/*==================================================================================
+* 函 数 名： read_bufei_weigh
+* 参    数： None
+* 功能描述:  读取单片机板当前重量
+* 返 回 值： None
+* 备    注： 
+* 作    者： lc
+* 创建时间： 2022-12-08 170658
+==================================================================================*/  
+_Tag_Info read_bufei_weigh(void)  
+{
+	_Update_Send_Info pmsg;
+	android_rcv_uart_Msg uart_msg={0};
+    _Tag_Info tag_msg={0};
+
+	pmsg.len  = 0x08;
+	pmsg.slid = 0x00;
+	pmsg.main_cmd = READ_CMD;
+	pmsg.nodeID = 0x00;
+	pmsg.slave_cmd = ANDROID_CC_GET_WEIGH;
+
+	uart_msg = send_data_to_gd32(&pmsg);
 	memcpy(&tag_msg.weighValue, uart_msg.data+6+TAG_UID_LENS, 4);
 
 	return tag_msg;
 }
 
+/*==================================================================================
+* 函 数 名： read_bufei_card_uid
+* 参    数： None
+* 功能描述:  读取单片机用户卡uid
+* 返 回 值： None
+* 备    注： 
+* 作    者： lc
+* 创建时间： 2022-12-08 170658
+==================================================================================*/  
+_Tag_Info read_bufei_card_uid(void)  
+{
+	_Update_Send_Info pmsg;
+	android_rcv_uart_Msg uart_msg={0};
+    _Tag_Info tag_msg={0};
+
+	pmsg.len  = 0x08;
+	pmsg.slid = 0x00;
+	pmsg.main_cmd = READ_CMD;
+	pmsg.nodeID = 0x00;
+	pmsg.slave_cmd = ANDROID_CC_GET_CARD_UID;
+
+	uart_msg = send_data_to_gd32(&pmsg);
+	memcpy(tag_msg.uid, uart_msg.data+6, TAG_UID_LENS);
+
+	return tag_msg;
+}
 
 // void weightest(void)
 // {

@@ -1,10 +1,14 @@
+/*****************************************************************************************
+ * 文件说明：
+ * 各种外设的管理，比如LED。。。。。。
+ *****************************************************************************************/
 #include <stdio.h>
 #include <fcntl.h>
 #include <linux/i2c-dev.h>
 #include <unistd.h>
 #include <stdint.h>
 #include <stdbool.h>
-
+#include "../devConfig.h"
 #include <math.h>
 #include "perDevice.h"
 

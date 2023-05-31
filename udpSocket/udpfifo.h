@@ -5,14 +5,14 @@
 #include <string.h>
 
 
-#define MAX_UDP_CACHE_LEN					200	//UDP发送缓存
+#define MAX_UDP_CACHE_LEN					1024	//UDP发送缓存
 #define MAX_UDP_CACHE_NUM				  10	//最大缓存池
 
 
 typedef struct 
 { 
 	uint8_t byte_count;
-	uint8_t  data[MAX_UDP_CACHE_LEN];
+	char  data[MAX_UDP_CACHE_LEN];
 }_udp_Msg, *_pUdp_Msg;
 
 

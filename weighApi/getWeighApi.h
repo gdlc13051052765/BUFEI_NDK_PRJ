@@ -9,6 +9,9 @@
 #include "../crc/gdCrc32.h"
  
 
+#define MAX_READ_ZERO_NUM		5
+#define MAX_TAG_NUM		    	1
+#define TAG_MAX_TRY_TIME		3			//最大尝试次数，超过则认为标签离开
 #define TAG_UID_LENS			8
 #define TAG_LENGTH		    	TAG_UID_LENS
 
@@ -29,11 +32,20 @@ typedef struct
     char data[T113_RCV_LENGTH];
 }android_rcv_uart_Msg, *_pandroid_rcv_uart_Msg;
 
+//版本信息结构体
+typedef struct 
+{ 
+    char hardVer[100]; 
+    char softVer[100];
+}android_ver_Msg, *_pandroid_ver_Msg;
+
 typedef enum
 {
 	//安卓发起到CC的命令 
-	ANDROID_CC_GET_SW_AND_HW_VER	= 0xA1,//获取版本号
-	ANDROID_CC_GET_WEIGH_UUID,//获取当前重量值跟卡号
+	ANDROID_CC_GET_SW_AND_HW_VER = 0xA1,//获取版本号
+	ANDROID_CC_GET_WEIGH_UID,//获取当前重量值跟卡号
+	ANDROID_CC_GET_WEIGH,//获取当前重量值
+	ANDROID_CC_GET_CARD_UID,//获取当卡号
 
 	//固件升级命令
 	ANDROID_CC_UPDATE_INFO  = 0x80,//下发升级包信息
@@ -75,7 +87,8 @@ typedef struct
 typedef struct
 {
 	//读卡参数
-	uint8_t is_use;			//是否为有效标签 0==无卡；1==非美餐卡；2==美餐卡
+	uint8_t  toalNum;//卡片数量
+	uint8_t meicanCode;			//美餐标识符
 	uint8_t try_time;		//尝试次数，如果超过最大次数则认为标签离开
 	//标签信息
 	uint8_t uid[TAG_UID_LENS];	//存放标签的uid
@@ -90,6 +103,26 @@ typedef struct
 	int32_t toalMoney;
 }_Tag_Info, *_pTag_Info;
 
+
+typedef struct
+{
+	//读卡参数
+	uint8_t meican_code;			//美餐标识符
+	uint8_t try_time;		//尝试次数，如果超过最大次数则认为标签离开
+	//标签信息
+	uint8_t uid[TAG_LENGTH];		//存放标签的uid
+	uint8_t block[TAG_LENGTH];	//block数据
+}_Card_Info,*_pCard_Info;
+
+typedef struct
+{
+	uint8_t total_tag_num;	//总标签数量，包含EXIT_STA状态的标签
+	uint8_t read_tag_num;	//读取到的标签数量，每一次读取的标签数量
+	uint8_t use_state;		//每一位代表一个存储， 0：当前为空  1：代表有标签数据
+
+	_Card_Info new_tag_info[MAX_TAG_NUM];
+	_Card_Info old_tag_info[MAX_TAG_NUM];
+}_Tag_Context,*_pTag_Context;
 
 /*==================================================================================
 * 函 数 名： init_gd32_uart_api
@@ -122,7 +155,7 @@ android_rcv_uart_Msg send_data_to_gd32(void* ret_msg) ;
 * 作    者： lc
 * 创建时间： 2022-12-08 170658
 ==================================================================================*/  
-android_rcv_uart_Msg read_bufei_version(void)  ;
+android_rcv_uart_Msg read_bufei_version(void) ;
 
 /*==================================================================================
 * 函 数 名： read_bufei_weigh_uuid
@@ -134,5 +167,27 @@ android_rcv_uart_Msg read_bufei_version(void)  ;
 * 创建时间： 2022-12-08 170658
 ==================================================================================*/  
 _Tag_Info read_bufei_weigh_uuid(void)  ;
+
+/*==================================================================================
+* 函 数 名： read_bufei_weigh
+* 参    数： None
+* 功能描述:  读取单片机板当前重量
+* 返 回 值： None
+* 备    注： 
+* 作    者： lc
+* 创建时间： 2022-12-08 170658
+==================================================================================*/  
+_Tag_Info read_bufei_weigh(void) ; 
+
+/*==================================================================================
+* 函 数 名： read_bufei_card_uid
+* 参    数： None
+* 功能描述:  读取单片机用户卡uid
+* 返 回 值： None
+* 备    注： 
+* 作    者： lc
+* 创建时间： 2022-12-08 170658
+==================================================================================*/  
+_Tag_Info read_bufei_card_uid(void) ;
 
 #endif

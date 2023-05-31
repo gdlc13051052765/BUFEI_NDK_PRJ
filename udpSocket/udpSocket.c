@@ -1,3 +1,7 @@
+/*****************************************************************************************
+ * 文件说明：
+ * UDP SOCKET 创建，数据接收以及命令解析处理
+ *****************************************************************************************/
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <errno.h> 
@@ -9,18 +13,19 @@
 #include <sys/wait.h> 
 #include <unistd.h> 
 #include <arpa/inet.h> 
-#include "../debug.h"
+
 #include "udpSocket.h"
 #include "../json/cJSON.h"
 #include "../cAppTask/cAppTask.h"
 #include "../perDevice/perDevice.h"
 #include "../devConfig.h"
 #include "udpSocket/udpfifo.h"
+#include "../weighApi/getWeighApi.h"
 
 
 //udp命令列表 利用enum实现switch case 字符串功能
-enum choice {getVersion, setLed, getWeigh, getCard, getDevUUID, ota, endCmd};
-const char *choices[] = {"getVersion", "setLed", "getWeigh", "getCard", "getDevUUID", "ota" "endCmd"};
+enum choice {getVersion, setLed, getWeigh, getCard, getCardWeigh, getDevUUID, ota, endCmd};
+const char *choices[] = {"getVersion", "setLed", "getWeigh", "getCard", "getCardWeigh", "getDevUUID", "ota" "endCmd"};
 
 #define RCV_PORT 6666//接收端口
 #define SEN_PORT 8888//发送端口
@@ -96,12 +101,12 @@ void udpsocket_receive_data(void)
             memset(pUdpmag.data,0,sizeof(pUdpmag.data));
             memcpy(pUdpmag.data, udpRcvBuf, rlen);
             debug_print("udpsocket_receive_data = %s\n",pUdpmag.data);
+            //udp接收数据添加到缓存队列
             udp_fifo_push_data_msg(&pUdpmag);
         #else
             udpsocket_data_processing(udpRcvBuf);
         #endif
         usleep(1000);
-       // udpsocket_send_data(udpSendBuf);
     }
 }
 
@@ -163,6 +168,28 @@ static void udpsocket_ack_result_code(int status, char *string)
 }
 
 /*==================================================================================
+* 函 数 名： udpsocket_ack_data_code
+* 参    数：
+* 功能描述:  udp socket 应答
+* 返 回 值： 创建成功返回0
+* 备    注： None
+* 作    者： lc
+* 创建时间： 2023/03/30
+==================================================================================*/
+static void udpsocket_ack_data_code(int status, char *msg,  char *dataStr)
+{
+    //创建根节点JSON(最外面大括号的JSON对象)
+    cJSON *json_root=cJSON_CreateObject();
+    cJSON_AddBoolToObject(json_root, "success", status); 
+    cJSON_AddStringToObject(json_root, "message", msg);
+    cJSON_AddStringToObject(json_root, "data", dataStr);
+    char *data = cJSON_Print(json_root);
+    cJSON_Delete(json_root); 
+    debug_print("udp send data = %s\n", data);
+    udpsocket_send_data(data);
+}
+
+/*==================================================================================
 * 函 数 名： udpsocket_data_processing
 * 参    数：
 * 功能描述:  udp socket 接收数据处理
@@ -176,13 +203,23 @@ void udpsocket_data_processing(char *json_string)
     int i =0,num=0;
     int status;
     char *buf =NULL;
-    char data[128] = {0};
+    char data[512] = {0};
+    char msg_buf[512] = {0};
     char temp_str[256] = {0};
     char numStr[256] = {0};
+    char hardVerStr[256] = {0};
+    char softVerStr[256] = {0};
+
+    _Tag_Info cardInfoSt = {0};//卡片信息结构体
+    android_rcv_uart_Msg pVerMsg = {0};//版本号结构体
     cJSON* rootJson = NULL;
     cJSON *dataJson = NULL;
     cJSON *cmdJson = NULL;   
     cJSON *actionJson = NULL;
+    //设备状态json对象
+    cJSON *cjson_ack_data = NULL;
+    cJSON *json_root = NULL;
+    
     
     //JSON字符串到cJSON格式
     rootJson = cJSON_Parse(json_string); 
@@ -216,7 +253,44 @@ void udpsocket_data_processing(char *json_string)
     {
         case getVersion://获取设备版本号
             debug_print("get dev version msg cmd\n");
-           // udpsocket_send_data(udpSendBuf);
+            pVerMsg = read_bufei_version();
+            
+            memset(hardVerStr,0,sizeof(hardVerStr));
+            memset(softVerStr,0,sizeof(softVerStr));
+            sprintf(hardVerStr,"%02X", pVerMsg.data[6] );
+            sprintf(softVerStr,"%02X", pVerMsg.data[7]);
+
+            debug_print("get gd32 version %s %s \n", hardVerStr, softVerStr);
+            memset(msg_buf, 0, sizeof(data)); 
+            //创建根节点JSON(最外面大括号的JSON对象)
+            json_root=cJSON_CreateObject();  
+            if(pVerMsg.byte_count > 0)//查询成功
+            {
+                /* 添加一个嵌套的JSON数据（添加一个链表节点） */
+                cjson_ack_data = cJSON_CreateObject();
+                cJSON *cjson_ack_weigh_ver   = cJSON_CreateObject();
+                cJSON *cjson_ack_master_ver  = cJSON_CreateObject();
+                cJSON_AddStringToObject(cjson_ack_weigh_ver,  "hardVersion", hardVerStr);
+                cJSON_AddStringToObject(cjson_ack_weigh_ver,  "softVersion", softVerStr);
+                cJSON_AddStringToObject(cjson_ack_master_ver, "hardVersion", APP_HARD_VER);
+                cJSON_AddStringToObject(cjson_ack_master_ver, "softVersion", APP_SOFT_VER);
+
+                cJSON_AddItemToObject(cjson_ack_data, "weighBoard",  cjson_ack_weigh_ver);
+                cJSON_AddItemToObject(cjson_ack_data, "masterBoard", cjson_ack_master_ver);
+
+                cJSON_AddBoolToObject(json_root, "success", cJSON_True); 
+                cJSON_AddStringToObject(json_root, "message", "success");
+                cJSON_AddItemToObject(json_root, "data", cjson_ack_data);
+            } else {//查询失败
+                cJSON_AddBoolToObject(json_root, "success", cJSON_False); 
+                cJSON_AddStringToObject(json_root, "message", "gd32 version query fail");
+            }  
+                 
+            char *data = cJSON_Print(json_root);
+            cJSON_Delete(json_root); 
+            debug_print("udp send data version= %s\n", data);
+            udpsocket_send_data(data);
+            return;
         break;
 
         case setLed://设置led
@@ -284,10 +358,88 @@ void udpsocket_data_processing(char *json_string)
 
         case getCard://获取用户卡片信息
             debug_print("get usr card msg cmd\n");
+             //获取重量以及卡片信息
+            cardInfoSt = get_weigh_card_uid();
+            //创建根节点JSON(最外面大括号的JSON对象)
+            json_root=cJSON_CreateObject();  
+            /* 添加一个嵌套的JSON数据（添加一个链表节点） */
+            cjson_ack_data = cJSON_CreateObject();
+            if(cardInfoSt.toalNum > 0)//有卡存在
+            {
+                cJSON *cjson_card_array   = cJSON_CreateArray();//创建一个json数组
+                cJSON *cjson_card  = cJSON_CreateObject();
+
+                memset(temp_str,0,sizeof(temp_str));
+                sprintf(temp_str,"%02X %02X %02X %02X %02X %02X %02X %02X",\
+                    cardInfoSt.uid[0],cardInfoSt.uid[1],cardInfoSt.uid[2],cardInfoSt.uid[3],\
+                    cardInfoSt.uid[4],cardInfoSt.uid[5],cardInfoSt.uid[6],cardInfoSt.uid[7]);
+                cJSON_AddStringToObject(cjson_card,  "uid", temp_str);
+                cJSON_AddNumberToObject(cjson_card,  "code", cardInfoSt.meicanCode);
+                cJSON_AddItemToArray(cjson_card_array, cjson_card);
+
+                cJSON_AddItemToObject(cjson_ack_data, "card", cjson_card_array);
+            }
+            cJSON_AddBoolToObject(json_root, "success", cJSON_True); 
+            cJSON_AddStringToObject(json_root, "message", "success");
+            cJSON_AddItemToObject(json_root, "data", cjson_ack_data);
+            
+            char *cardData = cJSON_Print(json_root);
+            cJSON_Delete(json_root); 
+            debug_print("udp send data getCard = %s\n", cardData);
+            udpsocket_send_data(cardData);
+            return;
+        break;
+
+        case getCardWeigh:
+            //获取重量以及卡片信息
+            cardInfoSt = get_weigh_card_uid();
+            //创建根节点JSON(最外面大括号的JSON对象)
+            json_root=cJSON_CreateObject();  
+            /* 添加一个嵌套的JSON数据（添加一个链表节点） */
+            cjson_ack_data = cJSON_CreateObject();
+            if(cardInfoSt.toalNum > 0)//有卡存在
+            {
+                cJSON *cjson_card_array   = cJSON_CreateArray();//创建一个json数组
+                cJSON *cjson_card  = cJSON_CreateObject();
+
+                memset(temp_str,0,sizeof(temp_str));
+                sprintf(temp_str,"%02X %02X %02X %02X %02X %02X %02X %02X",\
+                    cardInfoSt.uid[0],cardInfoSt.uid[1],cardInfoSt.uid[2],cardInfoSt.uid[3],\
+                    cardInfoSt.uid[4],cardInfoSt.uid[5],cardInfoSt.uid[6],cardInfoSt.uid[7]);
+                cJSON_AddStringToObject(cjson_card,  "uid", temp_str);
+                cJSON_AddNumberToObject(cjson_card,  "code", cardInfoSt.meicanCode);
+                cJSON_AddItemToArray(cjson_card_array, cjson_card);
+
+                cJSON_AddItemToObject(cjson_ack_data, "card", cjson_card_array);
+            }
+            cJSON_AddNumberToObject(cjson_ack_data, "weigh", cardInfoSt.weighValue);
+            cJSON_AddBoolToObject(json_root, "success", cJSON_True); 
+            cJSON_AddStringToObject(json_root, "message", "success");
+            cJSON_AddItemToObject(json_root, "data", cjson_ack_data);
+            
+            char *weighCardData = cJSON_Print(json_root);
+            cJSON_Delete(json_root); 
+            debug_print("udp send data getCardWeigh = %s\n", weighCardData);
+            udpsocket_send_data(weighCardData);
+            return;
         break;
 
         case getDevUUID://获取设备唯一UUID
             debug_print("get dev uuid cmd\n");
+             //创建根节点JSON(最外面大括号的JSON对象)
+            json_root=cJSON_CreateObject();  
+            /* 添加一个嵌套的JSON数据（添加一个链表节点） */
+            cjson_ack_data = cJSON_CreateObject();
+            cJSON_AddStringToObject(cjson_ack_data, "uuid", "11 22 33 44 55 66 77 88");
+            cJSON_AddBoolToObject(json_root, "success", cJSON_True); 
+            cJSON_AddStringToObject(json_root, "message", "success");
+            cJSON_AddItemToObject(json_root, "data", cjson_ack_data);
+            
+            char *uuidData = cJSON_Print(json_root);
+            cJSON_Delete(json_root); 
+            debug_print("udp send data uuid= %s\n", uuidData);
+            udpsocket_send_data(uuidData);
+            return;
         break;
 
         case ota://固件升级
